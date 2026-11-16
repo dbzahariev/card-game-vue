@@ -3,6 +3,8 @@ import { ref } from "vue";
 
 const deals = ref([]);
 const dealCount = ref(1);
+const exporting = ref(false);
+const exportError = ref('');
 const players = ["N", "E", "S", "W"];
 const suits = ["♠", "♥", "♦", "♣"];
 const ranks = ["A", "K", "Q", "J", "10", "9", "8", "7", "6", "5", "4", "3", "2"];
@@ -32,6 +34,20 @@ function createDeals() {
   deals.value = Array.from({ length: dealCount.value }, () => createDeal());
 }
 
+async function exportToWord() {
+  exporting.value = true;
+  exportError.value = '';
+  try {
+    const { downloadDeals } = await import('./exportDeals.js');
+    await downloadDeals(deals.value);
+  } catch (error) {
+    console.error(error);
+    exportError.value = 'Експортът не успя. Опитай отново.';
+  } finally {
+    exporting.value = false;
+  }
+}
+
 </script>
 
 <template>
@@ -43,7 +59,11 @@ function createDeals() {
           <label for="deal-count">Брой раздавания</label>
           <input id="deal-count" v-model.number="dealCount" type="number" min="1" step="1" required>
           <button class="create-hand" type="submit">Създай раздавания</button>
+          <button class="create-hand" type="button" :disabled="!deals.length || exporting" @click="exportToWord">
+            {{ exporting ? 'Експортиране…' : 'Експорт в Word' }}
+          </button>
         </form>
+        <p v-if="exportError" role="alert">{{ exportError }}</p>
         <div aria-live="polite">
           <div v-if="deals.length" class="deals">
             <article v-for="(hands, index) in deals" :key="index" class="deal-board" :aria-labelledby="`deal-${index}`">
